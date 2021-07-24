@@ -6,6 +6,10 @@
 #include <jansson.h>
 
 typedef struct {
+  ngx_flag_t enable;
+} ngx_http_auth_jwt_srv_conf_t;
+
+typedef struct {
   ngx_str_t jwt_key;          // Forwarded key (with auth_jwt_key)
   ngx_int_t jwt_flag;         // Function of "auth_jwt": on -> 1 | off -> 0 | $variable -> 2
   ngx_int_t jwt_var_index;    // Used only if jwt_flag==2 to fetch the $variable value
@@ -47,8 +51,10 @@ static u_char * auth_jwt_safe_string(ngx_pool_t *pool, u_char *src, size_t len);
 // Configuration functions
 static ngx_int_t ngx_http_auth_jwt_add_variables(ngx_conf_t *cf);
 static ngx_int_t ngx_http_auth_jwt_init(ngx_conf_t *cf);
-static void * ngx_http_auth_jwt_create_conf(ngx_conf_t *cf);
-static char * ngx_http_auth_jwt_merge_conf(ngx_conf_t *cf, void *parent, void *child);
+static void * ngx_http_auth_jwt_create_srv_conf(ngx_conf_t *cf);
+static char * ngx_http_auth_jwt_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child);
+static void * ngx_http_auth_jwt_create_loc_conf(ngx_conf_t *cf);
+static char * ngx_http_auth_jwt_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child);
 
 // Declaration functions
 static char * ngx_conf_set_auth_jwt_key(ngx_conf_t *cf, ngx_command_t *cmd, void *conf);
@@ -133,11 +139,11 @@ static ngx_http_module_t ngx_http_auth_jwt_module_ctx = {
   NULL,                        /* create main configuration */
   NULL,                        /* init main configuration */
 
-  NULL,                        /* create server configuration */
-  NULL,                        /* merge server configuration */
+  ngx_http_auth_jwt_create_srv_conf,             /* create server configuration */
+  ngx_http_auth_jwt_merge_srv_conf,              /* merge server configuration */
 
-  ngx_http_auth_jwt_create_conf,             /* create location configuration */
-  ngx_http_auth_jwt_merge_conf               /* merge location configuration */
+  ngx_http_auth_jwt_create_loc_conf,             /* create location configuration */
+  ngx_http_auth_jwt_merge_loc_conf               /* merge location configuration */
 };
 
 
@@ -229,6 +235,11 @@ static ngx_int_t ngx_http_auth_jwt_init(ngx_conf_t *cf)
   ngx_http_handler_pt        *h;
   ngx_http_core_main_conf_t  *cmcf;
 
+  ngx_http_auth_jwt_srv_conf_t *conf;
+
+  conf = ngx_http_conf_get_module_srv_conf(cf, ngx_http_auth_jwt_module);
+  if (!conf->enable) return NGX_OK;
+
   cmcf = ngx_http_conf_get_module_main_conf(cf, ngx_http_core_module);
 
   h = ngx_array_push(&cmcf->phases[NGX_HTTP_ACCESS_PHASE].handlers);
@@ -243,7 +254,35 @@ static ngx_int_t ngx_http_auth_jwt_init(ngx_conf_t *cf)
 }
 
 
-static void * ngx_http_auth_jwt_create_conf(ngx_conf_t *cf)
+static void * ngx_http_auth_jwt_create_srv_conf(ngx_conf_t *cf)
+{
+  ngx_http_auth_jwt_srv_conf_t *conf;
+
+  conf = ngx_pcalloc(cf->pool, sizeof(ngx_http_auth_jwt_srv_conf_t));
+  if (conf == NULL)
+  {
+    ngx_conf_log_error(NGX_LOG_ERR, cf, 0, "JWT: conf==NULL");
+    return NULL;
+  }
+
+  // Initialize variables
+  conf->enable = NGX_CONF_UNSET;
+
+  return conf;
+}
+
+
+static char * ngx_http_auth_jwt_merge_srv_conf(ngx_conf_t *cf, void *parent, void *child)
+{
+  ngx_http_auth_jwt_srv_conf_t *prev = parent;
+  ngx_http_auth_jwt_srv_conf_t *conf = child;
+
+  ngx_conf_merge_value(conf->enable, prev->enable, 0);
+
+  return NGX_CONF_OK;
+}
+
+static void * ngx_http_auth_jwt_create_loc_conf(ngx_conf_t *cf)
 {
   ngx_http_auth_jwt_loc_conf_t *conf;
 
@@ -264,7 +303,7 @@ static void * ngx_http_auth_jwt_create_conf(ngx_conf_t *cf)
 }
 
 
-static char * ngx_http_auth_jwt_merge_conf(ngx_conf_t *cf, void *parent, void *child)
+static char * ngx_http_auth_jwt_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
 {
   ngx_http_auth_jwt_loc_conf_t *prev = parent;
   ngx_http_auth_jwt_loc_conf_t *conf = child;
@@ -491,6 +530,8 @@ static char * ngx_conf_set_auth_jwt(ngx_conf_t *cf, ngx_command_t *cmd, void *co
     }
   }
 
+  ngx_http_auth_jwt_srv_conf_t *srv = ngx_http_conf_get_module_srv_conf(cf, ngx_http_auth_jwt_module);
+  srv->enable = 1;
   return NGX_CONF_OK;
 }
 
