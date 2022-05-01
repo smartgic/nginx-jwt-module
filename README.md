@@ -1,122 +1,111 @@
-[github-license-url]: /blob/master/LICENSE
-[docker-url]: https://hub.docker.com/r/maxxt/nginx-jwt-module/
+[![Alpine version](https://img.shields.io/badge/Alpine-Edge-green.svg?style=flat&logoColor=FFFFFF&color=87567)](https://alpinelinux.org/)
+[![Nginx version](https://img.shields.io/badge/Nginx-1.21.6-green.svg?style=flat&logoColor=FFFFFF&color=87567)](https://nginx.org/en/)
+[![Docker pulls](https://img.shields.io/docker/pulls/smartgic/nginx-jwt-module.svg?style=flat&logo=docker&logoColor=FFFFFF&color=87567)](https://hub.docker.com/r/smartgic/mnginx-jwt-module)
+[![Discord](https://img.shields.io/discord/809074036733902888)](https://discord.gg/sHM3Duz5d3) 
 
-# Nginx jwt auth module
-[![Build Status](https://img.shields.io/github/license/maxx-t/nginx-jwt-module.svg)][github-license-url]
-[![Build Status](https://img.shields.io/docker/build/maxxt/nginx-jwt-module.svg)][docker-url]
-[![Docker pulls](https://img.shields.io/docker/pulls/maxxt/nginx-jwt-module.svg)][docker-url]
+# Nginx JWT authentication module
 
 This is an NGINX module to check for a valid JWT.
 
-Inspired by [TeslaGov](https://github.com/TeslaGov/ngx-http-auth-jwt-module), [ch1bo](https://github.com/ch1bo/nginx-jwt) and [tizpuppi](https://github.com/tizpuppi/ngx_http_auth_jwt_module), this module intend to be as light as possible and to remain simple.
- - Docker image based on the [official nginx Dockerfile](https://github.com/nginxinc/docker-nginx) (alpine).
- - Light image (~16MB).
+Inspired by [TeslaGov](https://github.com/TeslaGov/ngx-http-auth-jwt-module) and [max-lt](https://github.com/max-lt/nginx-jwt-module) repositories.
 
-## Module:
+ - Docker image based on the [official nginx Dockerfile](https://github.com/nginxinc/docker-nginx) _(Alpine)_.
+ - Light image _(~10MB compressed)_.
 
-### Example Configuration:
+## NGINX Directives
+
+This module requires several new `nginx.conf` directives, which can be specified in on the `main`, `server` or `location` level.
+
+```nginx
+auth_jwt_key "646f6e2774207472792c206974277320612066616b6520736563726574203a29"; # see docs below for format based on algorithm
+auth_jwt_loginurl "https://yourdomain.com/loginpage";
+auth_jwt_enabled on;
+auth_jwt_algorithm HS256; # or RS256
+auth_jwt_validate_email on;  # or off
+auth_jwt_use_keyfile off; # or on
+auth_jwt_keyfile_path "/app/pub_key";
+```
+
+The default algorithm is `HS256`, for symmetric key validation. When using `HS256`, the value for `auth_jwt_key` should be specified in `hex` format. It is recommended to use at least 256-bits of data _(32 pairs of hex characters or 64 characters in total)_ as in the example above. Note that using more than 512-bits will not increase the security. For key guidelines please see NIST Special Publication 800-107 Recommendation for Applications Using Approved Hash Algorithms, Section 5.3.2 The HMAC Key.
+
+The configuration also supports the `auth_jwt_algorithm` `RS256`, for RSA 256-bit public key validation. If using `auth_jwt_algorithm RS256;`, then the `auth_jwt_key` field must be set to your public key **OR** `auth_jwt_use_keyfile` should be set to `on` with the `auth_jwt_keyfile_path` set to the public key path _(Nginx won't start if the `auth_jwt_use_keyfile` is set to `on` without a keyfile)_.
+
+That is the public key, rather than a PEM certificate. I.e.:
+
+```nginx
+auth_jwt_key "-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0aPPpS7ufs0bGbW9+OFQ
+RvJwb58fhi2BuHMd7Ys6m8D1jHW/AhDYrYVZtUnA60lxwSJ/ZKreYOQMlNyZfdqA
+rhYyyUkedDn8e0WsDvH+ocY0cMcxCCN5jItCwhIbIkTO6WEGrDgWTY57UfWDqbMZ
+4lMn42f77OKFoxsOA6CVvpsvrprBPIRPa25H2bJHODHEtDr/H519Y681/eCyeQE/
+1ibKL2cMN49O7nRAAaUNoFcO89Uc+GKofcad1TTwtTIwmSMbCLVkzGeExBCrBTQo
+wO6AxLijfWV/JnVxNMUiobiKGc/PP6T5PI70Uv67Y4FzzWTuhqmREb3/BlcbPwtM
+oQIDAQAB
+-----END PUBLIC KEY-----";
+```
+
+**OR**
+
+```nginx
+auth_jwt_use_keyfile on;
+auth_jwt_keyfile_path "/etc/nginx/pub_key.pem";
+```
+
+A typical use would be to specify the key and loginurl on the main level and then only turn on the locations that you want to secure _(not the login page)_.
+Unauthorized requests are given `302 "Moved Temporarily"` responses with a location of the specified `loginurl`.
+
+```nginx
+auth_jwt_redirect off;
+```
+
+If you prefer to return `401 Unauthorized`, you may turn `auth_jwt_redirect` to `off`.
+
+```nginx
+auth_jwt_validation_type AUTHORIZATION;
+auth_jwt_validation_type COOKIE=rampartjwt;
+```
+
+By default the authorization header is used to provide a JWT for validation. However, you may use the `auth_jwt_validation_type` configuration to specify the name of a cookie that provides the JWT.
+
+```nginx
+auth_jwt_validate_email off;
+```
+
+By default, the module will attempt to validate the email address field of the JWT, then set the x-email header of the session, and will log an error if it isn't found.  To disable this behavior, for instance if you are using a different user identifier property such as `sub`, set `auth_jwt_validate_email` to the value `off`.
+
+## Example
+
+In this example, the route `/` from `push.smartgic.io` listening on port `80` is protected by a JWT authentication. If the JWT is valid then, the request is redirected to https://pushgateway.appdomain.cloud. Only the `POST` is allowed.
+
 ```nginx
 server {
-    auth_jwt_key "0123456789abcdef" hex; # Your key as hex string
-    auth_jwt     off;
+    listen 80;
+    server_name push.smartgic.io;
 
-    location /secured-by-cookie/ {
-        auth_jwt $cookie_MyCookieName;
+    location / {
+        if ($request_method ~ ^(GET|PATCH|PUT|DELETE|OPTIONS|HEAD)$) {
+            return 403;
+        }
+
+        auth_jwt_key "646f6e2774207472792c206974277320612066616b6520736563726574203a29";
+        auth_jwt_enabled on;
+
+        proxy_set_header Host pushgateway.appdomain.cloud;
+        proxy_pass       https://pushgateway.appdomain.cloud;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Host $remote_addr;
+        proxy_buffering  off;
     }
-
-    location /secured-by-auth-header/ {
-        auth_jwt on;
-    }
-
-    location /secured-by-auth-header-too/ {
-        auth_jwt_key "another-secret"; # Your key as utf8 string
-        auth_jwt on;
-    }
-
-    location /secured-by-rsa-key/ {
-        auth_jwt_key /etc/keys/rsa-public.pem file; # Your key from a PEM file
-        auth_jwt on;
-    }
-
-    location /not-secure/ {}
 }
 ```
 
-> Note: don't forget to [load](http://nginx.org/en/docs/ngx_core_module.html#load_module) the module in the main context: <br>`load_module /usr/lib/nginx/modules/ngx_http_auth_jwt_module.so;`
+There is a complete example of JWT and TLS _(via Let's Encrypt)_ in the `examples` directory.
 
-### Directives:
+## Encode a `string` to `hex` using Python.
 
-    Syntax:	 auth_jwt $variable | on | off;
-    Default: auth_jwt off;
-    Context: http, server, location
-
-Enables validation of JWT.<hr>
-
-    Syntax:	 auth_jwt_key value [encoding];
-    Default: ——
-    Context: http, server, location
-
-Specifies the key for validating JWT signature (must be hexadecimal).<br>
-The *encoding* otpion may be `hex | utf8 | base64 | file` (default is `utf8`).<br>
-The `file` option requires the *value* to be a valid file path (pointing to a PEM encoded key).
-
-<hr>
-
-    Syntax:	 auth_jwt_alg any | HS256 | HS384 | HS512 | RS256 | RS384 | RS512 | ES256 | ES384 | ES512;
-    Default: auth_jwt_alg any;
-    Context: http, server, location
-
-Specifies which algorithm the server expects to receive in the JWT.
-
-### Embedded Variables:
-
-Module supports embedded variables:
-
-    $jwt_header
-
-returns whole header
-
-    $jwt_grant
-
-returns whole grant
-
-    $jwt_header_name
-
-returns header.name
-
-    $jwt_grant_name
-
-returns grant.name
-
-### Build:
-This module is built inside a docker container, from the [nginx](https://hub.docker.com/_/nginx/)-alpine image.
-
-```bash
-./build.sh # Will create a "jwt-nginx" (Dockerfile)
-```
-
-### Test:
-#### Default usage:
-```bash
-./test.sh # Will create a "jwt-nginx-test" image (from test-image/Dockerfile) based on the "jwt-nginx" one.
-```
-#### Set image name:
-```bash
-./test.sh your-image-to-test
-```
-example:
-```bash
-./test.sh jwt-nginx-s1 # tests the development image
-```
-#### Use current container:
-```bash
-./test.sh --current my-container
-```
-example:
-```bash
-# In a first terminal:
-docker run --rm --name my-test-container -p 8000:8000 jwt-nginx-test
-
-# In a second one:
-./test.sh --current my-test-container
+```python
+key = "don't try, it's a fake secret :)".encode("utf-8")
+print(key.hex())
+646f6e2774207472792c206974277320612066616b6520736563726574203a29
 ```
