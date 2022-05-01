@@ -12,6 +12,17 @@ Inspired by [TeslaGov](https://github.com/TeslaGov/ngx-http-auth-jwt-module) and
  - Docker image based on the [official nginx Dockerfile](https://github.com/nginxinc/docker-nginx) _(Alpine)_.
  - Light image _(~10MB compressed)_.
 
+## Supported architectures and tags
+
+| Architecture | Information                                        |
+| ---          | ---                                                |
+| `amd64`      | Such as AMD and Intel processors                   |
+| `arm/v6`     | Such as Raspberry Pi 1                             |
+| `arm/v7`     | Such as Raspberry Pi 2/3/4                         |
+| `arm64`      | Such as Raspberry Pi 4 64-bit                      |
+
+*These are examples, many other boards use these CPU architectures.*
+
 ## NGINX Directives
 
 This module requires several new `nginx.conf` directives, which can be specified in on the `main`, `server` or `location` level.
