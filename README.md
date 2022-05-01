@@ -12,6 +12,10 @@ Inspired by [TeslaGov](https://github.com/TeslaGov/ngx-http-auth-jwt-module) and
  - Docker image based on the [official nginx Dockerfile](https://github.com/nginxinc/docker-nginx) _(Alpine)_.
  - Light image _(~10MB compressed)_.
 
+```shell
+docker run -d --name nginx -v type=bind,source=/home/goldyfruit/infrastructure/nginx-jwt-module/jwt_redirect_ssl.conf,target=/etc/nginx/conf.d/jwt.conf smartgic/ -p 80:80 -p 443:443 nginx-jwt-module
+```
+
 ## Supported architectures
 
 | Architecture | Information                                        |
@@ -100,6 +104,8 @@ server {
 
         auth_jwt_key "646f6e2774207472792c206974277320612066616b6520736563726574203a29";
         auth_jwt_enabled on;
+        auth_jwt_redirect off;
+        auth_jwt_validate_email off;
 
         proxy_set_header Host pushgateway.appdomain.cloud;
         proxy_pass       https://pushgateway.appdomain.cloud;
