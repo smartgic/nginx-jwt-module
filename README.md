@@ -1,6 +1,6 @@
 [![Alpine version](https://img.shields.io/badge/Alpine-Edge-green.svg?style=flat&logoColor=FFFFFF&color=87567)](https://alpinelinux.org/)
 [![Nginx version](https://img.shields.io/badge/Nginx-1.21.6-green.svg?style=flat&logoColor=FFFFFF&color=87567)](https://nginx.org/en/)
-[![Docker pulls](https://img.shields.io/docker/pulls/smartgic/nginx-jwt-module.svg?style=flat&logo=docker&logoColor=FFFFFF&color=87567)](https://hub.docker.com/r/smartgic/mnginx-jwt-module)
+[![Docker pulls](https://img.shields.io/docker/pulls/smartgic/nginx-jwt-module.svg?style=flat&logo=docker&logoColor=FFFFFF&color=87567)](https://hub.docker.com/r/smartgic/nginx-jwt-module)
 [![Discord](https://img.shields.io/discord/809074036733902888)](https://discord.gg/sHM3Duz5d3) 
 
 # Nginx JWT authentication module
