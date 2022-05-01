@@ -12,7 +12,7 @@ Inspired by [TeslaGov](https://github.com/TeslaGov/ngx-http-auth-jwt-module) and
  - Docker image based on the [official nginx Dockerfile](https://github.com/nginxinc/docker-nginx) _(Alpine)_.
  - Light image _(~10MB compressed)_.
 
-## Supported architectures and tags
+## Supported architectures
 
 | Architecture | Information                                        |
 | ---          | ---                                                |
