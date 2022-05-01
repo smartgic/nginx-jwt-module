@@ -13,7 +13,12 @@ Inspired by [TeslaGov](https://github.com/TeslaGov/ngx-http-auth-jwt-module) and
  - Light image _(~10MB compressed)_.
 
 ```shell
-docker run -d --name nginx -v type=bind,source=/home/goldyfruit/infrastructure/nginx-jwt-module/jwt_redirect_ssl.conf,target=/etc/nginx/conf.d/jwt.conf smartgic/ -p 80:80 -p 443:443 nginx-jwt-module
+docker run -d \
+  --name nginx \
+  -v type=bind,source=/home/goldyfruit/infrastructure/nginx-jwt-module/jwt_redirect_ssl.conf,target=/etc/nginx/conf.d/jwt.conf smartgic/ \
+  -p 80:80 \
+  -p 443:443 \
+  nginx-jwt-module
 ```
 
 ## Supported architectures
