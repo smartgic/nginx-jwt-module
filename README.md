@@ -5,7 +5,7 @@
 
 # Nginx JWT authentication module
 
-This is an NGINX module to check for a valid JWT.
+This is a NGINX module to check for a valid JWT.
 
 Inspired by [TeslaGov](https://github.com/TeslaGov/ngx-http-auth-jwt-module) and [max-lt](https://github.com/max-lt/nginx-jwt-module) repositories.
 
